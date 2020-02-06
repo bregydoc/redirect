@@ -1,19 +1,30 @@
 import os
-from flask import Flask, redirect
+from flask import Flask, redirect, request
 
-focus_url = os.environ.get('REDIRECT_URL', "http://www.example.com")
-code_redirect = os.environ.get('REDIRECT_CODE', 302)
-port = os.environ.get('PORT', 8080)
-route = os.environ.get('ROUTE', '/')
+import config
+import instrumenting
+
+
+conf = config.Config()
+inst = instrumenting.Instrument()
 
 app = Flask(__name__)
 
 
-@app.route(route)
+@app.route(conf.route)
+@inst.redirect_time.time()
 def hello():
-    return redirect(focus_url, code=code_redirect)
+    inst.main_counter.inc()
+    ip = request.remote_addr
+    browser = request.user_agent.browser
+    platform = request.user_agent.platform
+    language = request.user_agent.language
+
+    inst.users_counter.labels(ip=ip, browser=browser,
+                              platform=platform, language=language).inc()
+    return redirect(conf.focus_url, code=conf.code_redirect)
 
 
 if __name__ == '__main__':
-    p = int(port)
-    app.run(host='0.0.0.0', port=p)
+    inst.instrument_now(port=int(conf.instrument_port))
+    app.run(host='0.0.0.0', port=int(conf.port))
