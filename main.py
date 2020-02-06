@@ -11,8 +11,8 @@ inst = instrumenting.Instrument()
 app = Flask(__name__)
 
 
-@app.route(conf.route)
 @inst.redirect_time.time()
+@app.route(conf.route)
 def hello():
     inst.main_counter.inc()
     ip = request.remote_addr
